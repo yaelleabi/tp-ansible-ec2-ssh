@@ -1,0 +1,39 @@
+---
+- hosts: all
+  become: yes
+  tasks:
+    - name: Detect the distribution
+      command: cat /etc/os-release
+      register: os_release
+
+    - name: Install Docker on Debian/Ubuntu
+      when: "'ID=ubuntu' in os_release.stdout or 'ID=debian' in os_release.stdout"
+      apt:
+        update_cache: yes
+        name: docker.io
+        state: present
+        update_cache: yes
+    
+    - name: S'assurer que Docker est démarré
+      service:
+        name: docker
+        state: started
+        enabled: yes
+      
+    - name: Assurer que Docker est démarré et activé au démarrage
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Add user web to docker group
+      user:
+        name: web
+        groups: docker
+        append: yes
+
+    - name: Installer python3-pip
+      apt:
+        name: python3-pip
+        state: present
+        update_cache: yes

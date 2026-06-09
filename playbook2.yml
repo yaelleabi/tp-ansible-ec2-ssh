@@ -1,0 +1,20 @@
+---
+- name: Créer l'utilisateur web
+  hosts: all
+  remote_user: admin
+  become: true
+
+  tasks:
+    - name: Créer l'utilisateur web
+      user:
+        name: web
+        shell: /bin/bash
+        create_home: yes
+
+    - name: Récupérer la clé publique de l'utilisateur admin pour web
+      authorized_key:
+        user: web
+        state: present
+        key: "{{ lookup('file', 'ssh_keys/my_ansible_key.pub') }}"
+
+        

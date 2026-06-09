@@ -1,5 +1,5 @@
 all:
   hosts:
-    51.20.189.66:
+    51.20.248.172:
       ansible_user: admin
       ansible_ssh_private_key_file: ssh_keys/my_ansible_key
