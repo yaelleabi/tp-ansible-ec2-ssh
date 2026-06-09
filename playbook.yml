@@ -1,0 +1,57 @@
+- name: Génération clé SSH et déploiement EC2
+  hosts: localhost
+  gather_facts: no
+  vars:
+    ssh_key_name: my_ansible_key
+    ssh_key_path: ssh_keys/my_ansible_key
+    subnet_id: subnet-060d7e892c649a017
+    security_group_id: sg-017bdf51f4b66c492
+    ami_id: ami-01ef747f983799d6f
+    region: eu-north-1
+
+  tasks:
+    - name: Préparer répertoire des clés
+      file:
+        path: ssh_keys
+        state: directory
+        mode: '0700'
+
+    - name: Générer la paire de clés SSH
+      openssh_keypair:
+        path: "{{ ssh_key_path }}"
+        type: rsa
+        size: 2048
+        mode: '0600'
+      register: keypair_result
+
+    - name: Enregistrer la clé publique dans AWS
+      amazon.aws.ec2_key:
+        name: "{{ ssh_key_name }}"
+        key_material: "{{ keypair_result.public_key }}"
+        region: "{{ region }}"
+
+    - name: Lancer une EC2
+      amazon.aws.ec2_instance:
+        name: demo-ec2
+        key_name: "{{ ssh_key_name }}"
+        instance_type: t3.micro
+        image_id: "{{ ami_id }}"
+        region: "{{ region }}"
+        wait: yes
+        network_interfaces:
+          - device_index: 0
+            subnet_id: "{{ subnet_id }}"
+            assign_public_ip: yes
+            groups:
+              - "{{ security_group_id }}"
+      register: ec2
+
+    - name: Générer un fichier d'inventaire
+      copy:
+        dest: inventory_ec2.yml
+        content: |
+          all:
+            hosts:
+              {{ ec2.instances[0].public_ip_address }}:
+                ansible_user: ubuntu
+                ansible_ssh_private_key_file: ssh_keys/my_ansible_key
